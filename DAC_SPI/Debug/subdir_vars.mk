@@ -7,33 +7,57 @@ CMD_SRCS += \
 ../bitband_ccs.cmd 
 
 C_SRCS += \
-../bitband.c \
+../PWM_GEN.c \
 ../buttons.c \
-../startup_ccs.c 
+../duty_reader.c \
+../main.c \
+../mcp4821.c \
+../startup_ccs.c \
+../virtual_encoder.c 
 
 OBJS += \
-./bitband.obj \
+./PWM_GEN.obj \
 ./buttons.obj \
-./startup_ccs.obj 
+./duty_reader.obj \
+./main.obj \
+./mcp4821.obj \
+./startup_ccs.obj \
+./virtual_encoder.obj 
 
 C_DEPS += \
-./bitband.d \
+./PWM_GEN.d \
 ./buttons.d \
-./startup_ccs.d 
+./duty_reader.d \
+./main.d \
+./mcp4821.d \
+./startup_ccs.d \
+./virtual_encoder.d 
 
 C_DEPS__QUOTED += \
-"bitband.d" \
+"PWM_GEN.d" \
 "buttons.d" \
-"startup_ccs.d" 
+"duty_reader.d" \
+"main.d" \
+"mcp4821.d" \
+"startup_ccs.d" \
+"virtual_encoder.d" 
 
 OBJS__QUOTED += \
-"bitband.obj" \
+"PWM_GEN.obj" \
 "buttons.obj" \
-"startup_ccs.obj" 
+"duty_reader.obj" \
+"main.obj" \
+"mcp4821.obj" \
+"startup_ccs.obj" \
+"virtual_encoder.obj" 
 
 C_SRCS__QUOTED += \
-"../bitband.c" \
+"../PWM_GEN.c" \
 "../buttons.c" \
-"../startup_ccs.c" 
+"../duty_reader.c" \
+"../main.c" \
+"../mcp4821.c" \
+"../startup_ccs.c" \
+"../virtual_encoder.c" 
 
 

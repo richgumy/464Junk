@@ -1,1 +1,1 @@
-"./bitband.obj" "./buttons.obj" "./startup_ccs.obj" "./utils/uartstdio.obj" "../bitband_ccs.cmd" -llibc.a -l"C:/ti/TivaWare_C_Series-2.1.3.156/driverlib/ccs/Debug/driverlib.lib" 
+"./PWM_GEN.obj" "./buttons.obj" "./duty_reader.obj" "./main.obj" "./mcp4821.obj" "./startup_ccs.obj" "./virtual_encoder.obj" "./utils/uartstdio.obj" "../bitband_ccs.cmd" -llibc.a -l"C:/ti/TivaWare_C_Series-2.1.3.156/driverlib/ccs/Debug/driverlib.lib" 

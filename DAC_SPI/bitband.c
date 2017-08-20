@@ -1,42 +1,4 @@
-//*****************************************************************************
-//
-// spi_master.c - Example demonstrating how to configure SSI0 in SPI master
-//                mode.
-//
-// Copyright (c) 2010-2016 Texas Instruments Incorporated.  All rights reserved.
-// Software License Agreement
-//
-//   Redistribution and use in source and binary forms, with or without
-//   modification, are permitted provided that the following conditions
-//   are met:
-//
-//   Redistributions of source code must retain the above copyright
-//   notice, this list of conditions and the following disclaimer.
-//
-//   Redistributions in binary form must reproduce the above copyright
-//   notice, this list of conditions and the following disclaimer in the
-//   documentation and/or other materials provided with the
-//   distribution.
-//
-//   Neither the name of Texas Instruments Incorporated nor the names of
-//   its contributors may be used to endorse or promote products derived
-//   from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision 2.1.3.156 of the Tiva Firmware Development Package.
-//
-//*****************************************************************************
+
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -50,23 +12,16 @@
 #include "driverlib/systick.h"
 #include "driverlib/uart.h"
 #include "utils/uartstdio.h"
+// DAC header
+#include "mcp4821.h"
 
 //*****************************************************************************
 //
-//! \addtogroup ssi_examples_list
-//! <h1>SPI Master (spi_master)</h1>
 //!
-//! This example shows how to configure the SSI0 as SPI Master.  The code will
-//! send three characters on the master Tx then polls the receive FIFO until
-//! 3 characters are received on the master Rx.
-//!
-//! This example uses the following peripherals and I/O signals.  You must
-//! review these and change as needed for your own board:
+//! This example uses the following peripherals and I/O signals:
 //! - SSI0 peripheral
 //! - GPIO Port A peripheral (for SSI0 pins)
 //! - SSI0Clk - PA2
-//! - SSI0Fss - PA3
-//! - SSI0Rx  - PA4
 //! - SSI0Tx  - PA5
 //!
 //! The following UART signals are configured only for displaying console
@@ -90,18 +45,6 @@
 #define SLOWTICK_RATE_HZ 10
 
 volatile uint8_t slowTick = false; // global tick state (for delays)
-
-//*****************************************************************************
-//
-// Number of bytes to send and receive.
-//
-//*****************************************************************************
-#define NUM_SSI_DATA            2
-
-uint32_t unscaled_analog_byte1 = 0x07;
-uint32_t unscaled_analog_byte2 = 0x00;
-
-float Vref = 2.048;
 
 //*******************************************************************
 //
@@ -183,10 +126,93 @@ InitConsole(void)
     UARTStdioConfig(0, 115200, 16000000);
 }
 
-//*****************************************************************************
-// Check button states and debounce
-//*****************************************************************************
-// TODO:...
+////*****************************************************************************
+////
+//// Set analogue output voltage, Vout
+////
+////*****************************************************************************
+//void updateAnalogueOutput(float Vout)
+//{
+//	uint32_t pui32DataTx[NUM_SSI_DATA];
+//	uint32_t ui32Index;
+//
+//	uint32_t hex_value = 4096 * Vout / Vref;
+//	// MSByte bit mask then shift value to make 8bit number
+//	unscaled_analog_byte1 = (hex_value & 0xF00) >> 8;
+//	// 0x30 = 0011 = config bits, go to datasheet
+//	unscaled_analog_byte1 |= 0x30;
+//
+//	// LSByte bit mask
+//	unscaled_analog_byte2 = hex_value & 0xFF;
+//
+//    pui32DataTx[0] = unscaled_analog_byte1;
+//    pui32DataTx[1] = unscaled_analog_byte2;
+//
+//    // Set CS to zero to allow DAC register to be written
+//    GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_3, 0x0);
+//
+//    // Send 2 bytes of data
+//    for(ui32Index = 0; ui32Index < NUM_SSI_DATA; ui32Index++)
+//    {
+//		// Send the data using the "blocking" put function.  This function
+//		// will wait until there is room in the send FIFO before returning.
+//		// This allows you to assure that all the data you send makes it into
+//		// the send FIFO.
+//		SSIDataPut(SSI0_BASE, pui32DataTx[ui32Index]);
+//    }
+//
+//    // Wait until SSI0 is done transferring all the data in the transmit FIFO.
+//    while(SSIBusy(SSI0_BASE))
+//    {
+//    }
+//
+//    // Set CS to high to ready DAC register for Vout
+//    GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_3, GPIO_PIN_3);
+//}
+//
+////*****************************************************************************
+////
+//// Initialise the MCP4821 DAC pins
+////
+////*****************************************************************************
+//void initMCP4821 (void)
+//{
+//    // The SSI0 peripheral must be enabled for use on port A.
+//    SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI0);
+//    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+//
+//	// Configure the pin muxing for SSI0 functions on port A2, and A5
+//	// respectively.
+//    GPIOPinConfigure(GPIO_PA2_SSI0CLK);
+//    GPIOPinConfigure(GPIO_PA5_SSI0TX);
+//
+//    // Configure specific pins in use for SSI (SPI)
+//    GPIOPinTypeSSI(GPIO_PORTA_BASE, GPIO_PIN_5 | GPIO_PIN_2);
+//
+//    // Configure pin A3 as Chip Select (CS) output
+//    GPIOPinTypeGPIOOutput(GPIO_PORTA_BASE, GPIO_PIN_3);
+//
+//    // Configure and enable the SSI port for SPI master mode.  Use SSI0,
+//    // system clock supply, idle clock level low and active low clock in
+//    // freescale SPI mode, master mode, 1MHz SSI frequency, and 8-bit data.
+//    // For SPI mode, you can set the polarity of the SSI clock when the SSI
+//    // unit is idle.  You can also configure what clock edge you want to
+//    // capture data on.  Please reference the datasheet for more information on
+//    // the different SPI modes.
+//    //
+//	#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+//		defined(TARGET_IS_TM4C129_RA1) ||                                         \
+//		defined(TARGET_IS_TM4C129_RA2)
+//		SSIConfigSetExpClk(SSI0_BASE, ui32SysClock, SSI_FRF_MOTO_MODE_0,
+//						   SSI_MODE_MASTER, 1000000, 8);
+//	#else
+//		SSIConfigSetExpClk(SSI0_BASE, SysCtlClockGet(), SSI_FRF_MOTO_MODE_0,
+//						   SSI_MODE_MASTER, 1000000, 8);
+//	#endif
+//
+//	// Enable the SSI0 module.
+//	SSIEnable(SSI0_BASE);
+//}
 
 //*****************************************************************************
 //
@@ -197,31 +223,13 @@ InitConsole(void)
 int
 main(void)
 {
-	#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
-		defined(TARGET_IS_TM4C129_RA1) ||                                         \
-		defined(TARGET_IS_TM4C129_RA2)
-		uint32_t ui32SysClock;
-	#endif
-
-		uint32_t pui32DataTx[NUM_SSI_DATA];
-		uint32_t pui32DataRx[NUM_SSI_DATA];
-		uint32_t ui32Index;
-
-		//
-		// Set the clocking to run directly from the external crystal/oscillator.
-		// TODO: The SYSCTL_XTAL_ value must be changed to match the value of the
-		// crystal on your board.
-		//
-	#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
-		defined(TARGET_IS_TM4C129_RA1) ||                                         \
-		defined(TARGET_IS_TM4C129_RA2)
-		ui32SysClock = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
-										   SYSCTL_OSC_MAIN |
-										   SYSCTL_USE_OSC), 25000000);
-	#else
-		SysCtlClockSet(SYSCTL_SYSDIV_1 | SYSCTL_USE_OSC | SYSCTL_OSC_MAIN |
-					   SYSCTL_XTAL_16MHZ);
-	#endif
+	//
+	// Set the clocking to run directly from the external crystal/oscillator.
+	// TODO: The SYSCTL_XTAL_ value must be changed to match the value of the
+	// crystal on your board.
+	//
+	SysCtlClockSet(SYSCTL_SYSDIV_1 | SYSCTL_USE_OSC | SYSCTL_OSC_MAIN |
+				   SYSCTL_XTAL_16MHZ);
 
 	initSysTick ();
 
@@ -234,190 +242,174 @@ main(void)
     //
     InitConsole();
 
-    while(1)
-    {
-    		uint8_t ui8CurButtonState, ui8PrevButtonState;
+//    while(1)
+//    {
+//    		uint8_t ui8CurButtonState, ui8PrevButtonState;
+//
+//    	    ui8CurButtonState = ui8PrevButtonState = 0;
+//
+//    	    int buttonPushed = 0;
+//
+//    		while(!buttonPushed)
+//    		{
+//    	        //
+//    	        // Poll the debounced state of the buttons.
+//    	        //
+//    	        ui8CurButtonState = ButtonsPoll(0, 0);
+//
+//    	        // Make functions for these processes
+//    	        if (slowTick)
+//    	        {
+//    				if(ui8CurButtonState != ui8PrevButtonState)
+//    				{
+//    		            if((ui8CurButtonState & ALL_BUTTONS) != 0)
+//    		            {
+//    		                if((ui8CurButtonState & ALL_BUTTONS) == LEFT_BUTTON)
+//    		                {
+//    		                	UARTprintf("Left Button is pressed.\n");
+//    		                	buttonPushed = 1;
+//    		                	// Decrement Voltage
+//    		                	unscaled_analog_byte2 = unscaled_analog_byte2 > 0? unscaled_analog_byte2-- : 0;
+//    		                }
+//    		                if((ui8CurButtonState & ALL_BUTTONS) == RIGHT_BUTTON)
+//    		                {
+//    		                	UARTprintf("Right Button is pressed.\n");
+//    		                	buttonPushed = 1;
+//    		                	// Increment voltage else...
+//    		                	// Limit volatge value so the value doesn't loop back to zero
+//    		                	// i.e. 0xFF + 0x01 = 0x100, which is seen as 0x00 for the voltage
+//    		                	unscaled_analog_byte2 = unscaled_analog_byte2 < 0xFF? unscaled_analog_byte2++ : 0xFF;
+//    		                }
+//    		            }
+//    				}
+//    				slowTick = false;
+//    	        }
+//
+//    		}
+//
+//    		buttonPushed = 0;
+//
+//    	    // Display the setup on the console.
+//    	    //
+//    	    UARTprintf("SSI ->\n");
+//    	    UARTprintf("  Mode: SPI\n");
+//    	    UARTprintf("  Data: 8-bit\n\n");
 
-    	    ui8CurButtonState = ui8PrevButtonState = 0;
+//    	    //
+//    	    // The SSI0 peripheral must be enabled for use.
+//    	    //
+//    	    SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI0);
+//
+//    	    //
+//    	    // For this example SSI0 is used with PortA[5:2].  The actual port and pins
+//    	    // used may be different on your part, consult the data sheet for more
+//    	    // information.  GPIO port A needs to be enabled so these pins can be used.
+//    	    // TODO: change this to whichever GPIO port you are using.
+//    	    //
+//    	    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+//
+//    	    //
+//    	    // Configure the pin muxing for SSI0 functions on port A2, and A5.
+//    	    // This step is not necessary if your part does not support pin muxing.
+//    	    // TODO: change this to select the port/pin you are using.
+//    	    //
+//    	    GPIOPinConfigure(GPIO_PA2_SSI0CLK);
+//    	    GPIOPinConfigure(GPIO_PA5_SSI0TX);
+//
+//    	    //
+//    	    // Configure the GPIO settings for the SSI pins.  This function also gives
+//    	    // control of these pins to the SSI hardware.  Consult the data sheet to
+//    	    // see which functions are allocated per pin.
+//    	    // The pins are assigned as follows:
+//    	    //      PA5 - SSI0Tx
+//    	    //      PA4 - SSI0Rx
+//    	    //      PA3 - SSI0Fss
+//    	    //      PA2 - SSI0CLK
+//    	    // TODO: change this to select the port/pin you are using.
+//    	    //
+//    	    GPIOPinTypeSSI(GPIO_PORTA_BASE, GPIO_PIN_5 | GPIO_PIN_2);
+//
+//
+//    	    // Set CS (ChipSelect) to low to ready DAC for data
+//
+//    	    GPIOPinTypeGPIOOutput(GPIO_PORTA_BASE, GPIO_PIN_3);
+//
+//    	    GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_3, 0x0);
+//
+//    	    //
+//    	    // Configure and enable the SSI port for SPI master mode.  Use SSI0,
+//    	    // system clock supply, idle clock level low and active low clock in
+//    	    // freescale SPI mode, master mode, 1MHz SSI frequency, and 8-bit data.
+//    	    // For SPI mode, you can set the polarity of the SSI clock when the SSI
+//    	    // unit is idle.  You can also configure what clock edge you want to
+//    	    // capture data on.  Please reference the datasheet for more information on
+//    	    // the different SPI modes.
+//    	    //
+//    	    SSIConfigSetExpClk(SSI0_BASE, SysCtlClockGet(), SSI_FRF_MOTO_MODE_0,
+//    	                       SSI_MODE_MASTER, 1000000, 8);
+//
+//    	    //
+//    	    // Enable the SSI0 module.
+//    	    //
+//    	    SSIEnable(SSI0_BASE);
 
-    	    int buttonPushed = 0;
-
-    		while(!buttonPushed)
+    		while(1)
     		{
-    	        //
-    	        // Poll the debounced state of the buttons.
-    	        //
-    	        ui8CurButtonState = ButtonsPoll(0, 0);
+        		initMCP4821();
 
-    	        // Make functions for these processes
-    	        if (slowTick)
-    	        {
-    				if(ui8CurButtonState != ui8PrevButtonState)
-    				{
-    		            if((ui8CurButtonState & ALL_BUTTONS) != 0)
-    		            {
-    		                if((ui8CurButtonState & ALL_BUTTONS) == LEFT_BUTTON)
-    		                {
-    		                	UARTprintf("Left Button is pressed.\n");
-    		                	buttonPushed = 1;
-    		                	unscaled_analog_byte2 = unscaled_analog_byte2 > 0? unscaled_analog_byte2-- : 0;
-    		                }
-    		                if((ui8CurButtonState & ALL_BUTTONS) == RIGHT_BUTTON)
-    		                {
-    		                	UARTprintf("Right Button is pressed.\n");
-    		                	buttonPushed = 1;
-    		                	unscaled_analog_byte2++;
-    		                	unscaled_analog_byte2 = unscaled_analog_byte2 < 0xFF? unscaled_analog_byte2++ : 0xFF;
-    		                }
-    		            }
-    				}
-    				slowTick = false;
-    	        }
-
+        	    updateAnalogueOutput(1.8); // output volts
     		}
 
-    		buttonPushed = 0;
 
-    	    // Display the setup on the console.
-    	    //
-    	    UARTprintf("SSI ->\n");
-    	    UARTprintf("  Mode: SPI\n");
-    	    UARTprintf("  Data: 8-bit\n\n");
-
-    	    //
-    	    // The SSI0 peripheral must be enabled for use.
-    	    //
-    	    SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI0);
-
-    	    //
-    	    // For this example SSI0 is used with PortA[5:2].  The actual port and pins
-    	    // used may be different on your part, consult the data sheet for more
-    	    // information.  GPIO port A needs to be enabled so these pins can be used.
-    	    // TODO: change this to whichever GPIO port you are using.
-    	    //
-    	    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
-
-    	    //
-    	    // Configure the pin muxing for SSI0 functions on port A2, A3, A4, and A5.
-    	    // This step is not necessary if your part does not support pin muxing.
-    	    // TODO: change this to select the port/pin you are using.
-    	    //
-    	    GPIOPinConfigure(GPIO_PA2_SSI0CLK);
-    	    GPIOPinConfigure(GPIO_PA3_SSI0FSS);
-    	    GPIOPinConfigure(GPIO_PA4_SSI0RX);
-    	    GPIOPinConfigure(GPIO_PA5_SSI0TX);
-
-    	    //
-    	    // Configure the GPIO settings for the SSI pins.  This function also gives
-    	    // control of these pins to the SSI hardware.  Consult the data sheet to
-    	    // see which functions are allocated per pin.
-    	    // The pins are assigned as follows:
-    	    //      PA5 - SSI0Tx
-    	    //      PA4 - SSI0Rx
-    	    //      PA3 - SSI0Fss
-    	    //      PA2 - SSI0CLK
-    	    // TODO: change this to select the port/pin you are using.
-    	    //
-    	    GPIOPinTypeSSI(GPIO_PORTA_BASE, GPIO_PIN_5 | GPIO_PIN_4 | GPIO_PIN_3 |
-    	                   GPIO_PIN_2);
-
-
-    	    // Set CS to low to ready DAC for data
-    	    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
-
-    	    GPIOPinTypeGPIOOutput(GPIO_PORTD_BASE, GPIO_PIN_2);
-
-    	    GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, 0x0);
-
-    	    //
-    	    // Configure and enable the SSI port for SPI master mode.  Use SSI0,
-    	    // system clock supply, idle clock level low and active low clock in
-    	    // freescale SPI mode, master mode, 1MHz SSI frequency, and 8-bit data.
-    	    // For SPI mode, you can set the polarity of the SSI clock when the SSI
-    	    // unit is idle.  You can also configure what clock edge you want to
-    	    // capture data on.  Please reference the datasheet for more information on
-    	    // the different SPI modes.
-    	    //
-    	#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
-    	    defined(TARGET_IS_TM4C129_RA1) ||                                         \
-    	    defined(TARGET_IS_TM4C129_RA2)
-    	    SSIConfigSetExpClk(SSI0_BASE, ui32SysClock, SSI_FRF_MOTO_MODE_0,
-    	                       SSI_MODE_MASTER, 1000000, 8);
-    	#else
-    	    SSIConfigSetExpClk(SSI0_BASE, SysCtlClockGet(), SSI_FRF_MOTO_MODE_0,
-    	                       SSI_MODE_MASTER, 1000000, 8);
-    	#endif
-
-    	    //
-    	    // Enable the SSI0 module.
-    	    //
-    	    SSIEnable(SSI0_BASE);
-
-    	    //
-    	    // Read any residual data from the SSI port.  This makes sure the receive
-    	    // FIFOs are empty, so we don't read any unwanted junk.  This is done here
-    	    // because the SPI SSI mode is full-duplex, which allows you to send and
-    	    // receive at the same time.  The SSIDataGetNonBlocking function returns
-    	    // "true" when data was returned, and "false" when no data was returned.
-    	    // The "non-blocking" function checks if there is any data in the receive
-    	    // FIFO and does not "hang" if there isn't.
-    	    //
-    	    while(SSIDataGetNonBlocking(SSI0_BASE, &pui32DataRx[0]))
-    	    {
-    	    }
-
-    	    //
-    	    // Initialize the data to send.
-    	    //
-    	    pui32DataTx[0] = 0x30 | unscaled_analog_byte1; // 0x30 -> 0011 = config bits go to datasheet
-    	    pui32DataTx[1] = unscaled_analog_byte2;
-
-    	    uint32_t MSB = unscaled_analog_byte1 << 8;
-
-    	    MSB = MSB+unscaled_analog_byte2;
-
-    	    float value = 100*Vref*(float)MSB/4096;
-
-    	    int new_val = value;
-
-    	    int twoDP = new_val % 100;
-
-    	    UARTprintf("Analogue Output Voltage: %x  %d.%d volts\n",MSB,(int)value/100,twoDP);
-
-    	    //
-    	    // Display indication that the SSI is transmitting data.
-    	    //
-    	    // UARTprintf("Sent:\n  ");
-
-    	    //
-    	    // Send 2 bytes of data.
-    	    //
-    	    for(ui32Index = 0; ui32Index < NUM_SSI_DATA; ui32Index++)
-    	    {
-    	        //
-    	        // Display the data that SSI is transferring.
-    	        //
-    	        // UARTprintf("'%x' ", pui32DataTx[ui32Index]);
-
-    	        //
-    	        // Send the data using the "blocking" put function.  This function
-    	        // will wait until there is room in the send FIFO before returning.
-    	        // This allows you to assure that all the data you send makes it into
-    	        // the send FIFO.
-    	        //
-    	        SSIDataPut(SSI0_BASE, pui32DataTx[ui32Index]);
-    	    }
-
-    	    //
-    	    // Wait until SSI0 is done transferring all the data in the transmit FIFO.
-    	    //
-    	    while(SSIBusy(SSI0_BASE))
-    	    {
-    	    }
-
-    	    // Set CS to high to ready DAC for Vout
-    	    GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, GPIO_PIN_2);
-
-    }
+//
+//    	    //
+//    	    // Initialize the data to send!!!
+//    	    //
+//    	    pui32DataTx[0] = 0x30 | unscaled_analog_byte1; // 0x30 -> 0011 = config bits go to datasheet
+//    	    pui32DataTx[1] = unscaled_analog_byte2;
+//
+//    	    uint32_t MSB = unscaled_analog_byte1 << 8;
+//
+//    	    MSB = MSB+unscaled_analog_byte2;
+//
+//    	    float value = 1000*Vref*(float)MSB/4096;
+//
+//    	    int new_val = value;
+//
+//    	    int twoDP = new_val % 1000;
+//
+//    	    UARTprintf("Analogue Output Voltage: %x  %d.%d volts\n",MSB,(int)value/1000,twoDP);
+//
+//    	    //
+//    	    // Display indication that the SSI is transmitting data.
+//    	    //
+//    	    // UARTprintf("Sent:\n  ");
+//
+//    	    //
+//    	    // Send 2 bytes of data.
+//    	    //
+//    	    for(ui32Index = 0; ui32Index < NUM_SSI_DATA; ui32Index++)
+//    	    {
+//
+//    	        //
+//    	        // Send the data using the "blocking" put function.  This function
+//    	        // will wait until there is room in the send FIFO before returning.
+//    	        // This allows you to assure that all the data you send makes it into
+//    	        // the send FIFO.
+//    	        //
+//    	        SSIDataPut(SSI0_BASE, pui32DataTx[ui32Index]);
+//    	    }
+//
+//    	    //
+//    	    // Wait until SSI0 is done transferring all the data in the transmit FIFO.
+//    	    //
+//    	    while(SSIBusy(SSI0_BASE))
+//    	    {
+//    	    }
+//
+//    	    // Set CS to high to ready DAC for Vout
+//    	    GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_3, GPIO_PIN_3);
+//
+//    }
 
 }

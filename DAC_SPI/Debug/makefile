@@ -10,9 +10,13 @@ GEN_OPTS__FLAG :=
 GEN_CMDS__FLAG := 
 
 ORDERED_OBJS += \
-"./bitband.obj" \
+"./PWM_GEN.obj" \
 "./buttons.obj" \
+"./duty_reader.obj" \
+"./main.obj" \
+"./mcp4821.obj" \
 "./startup_ccs.obj" \
+"./virtual_encoder.obj" \
 "./utils/uartstdio.obj" \
 "../bitband_ccs.cmd" \
 $(GEN_CMDS__FLAG) \
@@ -160,8 +164,8 @@ DAC_SPI.bin: $(EXE_OUTPUTS)
 # Other Targets
 clean:
 	-$(RM) $(EXE_OUTPUTS__QUOTED)$(BIN_OUTPUTS__QUOTED)
-	-$(RM) "bitband.d" "buttons.d" "startup_ccs.d" "utils\uartstdio.d" 
-	-$(RM) "bitband.obj" "buttons.obj" "startup_ccs.obj" "utils\uartstdio.obj" 
+	-$(RM) "PWM_GEN.d" "buttons.d" "duty_reader.d" "main.d" "mcp4821.d" "startup_ccs.d" "virtual_encoder.d" "utils\uartstdio.d" 
+	-$(RM) "PWM_GEN.obj" "buttons.obj" "duty_reader.obj" "main.obj" "mcp4821.obj" "startup_ccs.obj" "virtual_encoder.obj" "utils\uartstdio.obj" 
 	-@echo 'Finished clean'
 	-@echo ' '
 
